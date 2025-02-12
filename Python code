@@ -1,0 +1,63 @@
+import pandas as pd
+import spacy
+import random
+
+# Load NLP model
+nlp = spacy.load("en_core_web_sm")
+
+# Define saving tips
+SAVING_TIPS = {
+    "Food & Beverage": "Try cooking at home more often instead of eating out.",
+    "Shopping": "Consider buying only necessary items or waiting for discounts.",
+    "Transport": "Use public transport or carpool to save fuel costs.",
+    "Entertainment": "Look for free or budget-friendly activities instead of expensive events.",
+    "Uncategorized": "Review your spending habits and categorize untracked expenses."
+}
+
+# Sample transactions
+transactions = [
+    {"date": "2025-02-01", "description": "Bought Starbucks coffee", "amount": 5.50},
+    {"date": "2025-02-02", "description": "Paid Uber fare", "amount": 12.00},
+    {"date": "2025-02-05", "description": "Bought clothes from Amazon", "amount": 40.00},
+    {"date": "2025-02-10", "description": "Netflix subscription", "amount": 15.99},
+]
+
+# Convert to DataFrame
+df = pd.DataFrame(transactions)
+
+# AI-powered expense categorization
+CATEGORIES = {
+    "coffee": "Food & Beverage",
+    "uber": "Transport",
+    "amazon": "Shopping",
+    "netflix": "Entertainment",
+}
+
+def categorize_expense(description):
+    doc = nlp(description.lower())
+    for token in doc:
+        if token.text in CATEGORIES:
+            return CATEGORIES[token.text]
+    return "Uncategorized"
+
+df["category"] = df["description"].apply(categorize_expense)
+
+# Detect overspending
+average_spending = df.groupby("category")["amount"].mean()
+high_spending = df[df["amount"] > average_spending[df["category"]]]
+
+# Generate saving tips
+df["saving_tip"] = df["category"].apply(lambda cat: SAVING_TIPS.get(cat, "Review your spending."))
+
+# Save report
+df.to_csv("finance_report.csv", index=False)
+
+# Display results
+print("🚀 AI Finance Advisor Report 🚀\n")
+for _, row in df.iterrows():
+    print(f"📌 {row['description']} - ${row['amount']} ({row['category']})")
+    print(f"💡 Tip: {row['saving_tip']}\n")
+
+if not high_spending.empty:
+    print("⚠️ High Spending Alert! Consider reducing costs in:")
+    print(high_spending[["description", "amount", "category"]])
